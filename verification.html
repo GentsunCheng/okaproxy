@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello, nice to meet you.</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #E4E4E4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            color: #BB86FC;
+            margin: 0;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin: 10px 0;
+        }
+
+        .progress-container {
+            width: 80%;
+            background-color: #333;
+            height: 10px;
+            margin: 20px 0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 100%;
+            background-color: #BB86FC;
+            border-radius: 5px;
+            animation: loadProgress 5s forwards;
+        }
+
+        .status-text {
+            font-size: 1rem;
+            color: #E4E4E4;
+            margin-top: 20px;
+        }
+
+        @keyframes loadProgress {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+        
+        .icon {
+            font-size: 3rem;
+            color: #BB86FC;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>We are checking your connection...</h1>
+        <p>Please wait, we are preparing for you...</p>
+        <div class="icon">🔒</div>
+
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+
+        <div class="status-text">
+            <p>Verification progress: Initializing...</p>
+            <p>Estimated time: 5 sec</p>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(function() {
+            window.location.href = document.location.toString();
+        }, 5000); // Wait 5 Secound
+
+        // Update infomation
+        let progressText = document.querySelector('.status-text p');
+        let progressBar = document.querySelector('.progress-bar');
+        let progress = 0;
+        
+
+        let interval = setInterval(function() {
+            progress += 2;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                progressText.innerText = "Congratulations on passing the verification. Redirecting...";
+            } else {
+                progressText.innerText = progress + "%";
+            }
+            progressBar.style.width = progress + "%";
+        }, 100);
+    </script>
+</body>
+</html>

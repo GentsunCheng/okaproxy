@@ -1,0 +1,17 @@
+{
+  "name": "okaproxy",
+  "module": "index.js",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "http-proxy": "^1.18.1",
+    "toml": "^3.0.0"
+  }
+}
