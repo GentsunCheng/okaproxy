@@ -17,11 +17,11 @@ if (!fs.existsSync(configFilePath)) {
         // Copy example file to config.toml
         fs.copyFileSync(exampleConfigFilePath, configFilePath);
         console.log(
-            `'${configFilePath}' is missing. The example file has been copied from '${exampleConfigFilePath}'. Please configure the file and restart the program.`
+            `First time running. Please edit ${configFilePath}.`
         );
     } else {
         console.error(
-            "Both 'config.toml' and 'config.toml.example' are missing. Please provide a valid configuration file."
+            "Both 'config.toml' are missing. Please provide a valid configuration file."
         );
     }
     // Exit the program after copying the file or error
