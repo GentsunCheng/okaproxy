@@ -1,6 +1,8 @@
 const express = require("express");
+const http = require("http");
 const httpProxy = require("http-proxy");
 const cookieParser = require("cookie-parser");
+const rateLimit = require('express-rate-limit');
 
 const crypto = require("crypto");
 const fs = require("fs");
@@ -30,7 +32,7 @@ if (!fs.existsSync(configFilePath)) {
 
 let data;
 let veri_page;
-let not_found_page;
+let bad_gateway_page;
 // Read TOML file
 try {
     data = fs.readFileSync(configFilePath, "utf8");
@@ -57,10 +59,10 @@ try {
 }
 
 try {
-    not_found_page = fs.readFileSync("public/404.html", "utf8");
+    bad_gateway_page = fs.readFileSync("public/502.html", "utf8");
 } catch (err) {
     console.error("Error reading file:", err);
-    not_found_page = "<h1>404 Not Found</h1>";
+    bad_gateway_page = "<h1>502 Bad Gateway</h1>";
 }
 
 // Parse TOML file
@@ -73,13 +75,42 @@ try {
 }
 
 Object.entries(config).forEach(([key, proxyConfig]) => {
-    // Create Express app
-    const app = express();
-    const proxy = httpProxy.createProxyServer({});
-    const port = proxyConfig.port;
+    const port = proxyConfig.port || 3000;
     const targetUrl = proxyConfig.target_url;
     const expired = proxyConfig.expired;
     const secret_key = proxyConfig.secret_key;
+    const maxctn = proxyConfig.ctn.max || 50;
+    const limiter_time = proxyConfig.limit.time || 600;
+    const limiter_count = proxyConfig.limit.count || 100;
+    // Create Express app
+    const app = express();
+    const agent = new http.Agent({
+        keepAlive: true,
+        maxSockets: maxctn,
+        timeout: 60000,
+    });
+    const proxy = httpProxy.createProxyServer({
+        agent: agent,
+        changeOrigin: true,
+        preserveHeaderKeyCase: true,
+    });
+    const limiter = rateLimit({
+        windowMs: limiter_time * 1000,
+        max: limiter_count,
+        message: "Too many requests, please try again later.",
+        keyGenerator: (req) => {
+            // Get real client IP from headers
+            let clientIp;
+            if (req.headers['cf-connecting-ip']) {
+                clientIp = req.headers['cf-connecting-ip'];
+            } else if (req.headers['x-forwarded-for']) {
+                clientIp = req.headers['x-forwarded-for'].split(',')[0];  // First IP in the list
+            } else {
+                clientIp = req.connection.remoteAddress;
+            }
+            return clientIp;
+        }
+    });
 
     function encryptToken(data) {
         const hmac = crypto.createHmac("sha256", secret_key);
@@ -130,30 +161,24 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
     app.use(checkVerification);
 
     // Proxy all requests
-    app.all("*", (req, res) => {
+    app.all("*", async (req, res) => {
         proxy.web(req, res, { target: targetUrl }, (err) => {
-            console.error(`Proxy error: Unable to connect to ${targetUrl}`);
-            handleNotFound(req, res);
+            console.error(`Error proxying to target: ${err.message}`);
+            res.writeHead(502, { "Content-Type": "text/html" });
+            res.end(bad_gateway_page);
         });
     });
 
     // Error handling for proxy server
-    proxy.on("error", (err, req, res) => {
+    proxy.on("error", async (err, req, res) => {
         console.error("Proxy encountered an error:", err.message);
-        handleNotFound(req, res);
+        res.writeHead(500, { "Content-Type": "text/html" });
+        res.end(bad_gateway_page);
     });
-
-    // Function to handle 404 responses
-    function handleNotFound(req, res) {
-        const ext = path.extname(req.path).toLowerCase();
-        if (!ext || ext === ".html") {
-            res.status(404).send(not_found_page);
-        } else {
-            res.status(404).send("Not Found");
-        }
-    }
 
     app.listen(port, () => {
         console.log(`Server running on http://127.0.0.1:${port}`);
     });
+
+    app.use(limiter);
 });
