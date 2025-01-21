@@ -2,8 +2,8 @@ module.exports = {
     apps: [
       {
         name: 'okaproxy',
-        script: 'bun',
-        args: 'index.js',
+        script: 'index.js',
+        interpreter: 'bun',
         watch: true,
         instances: 'max',
         exec_mode: 'cluster',
