@@ -72,86 +72,88 @@ try {
     process.exit(1);
 }
 
-// Create Express app
-const app = express();
-const proxy = httpProxy.createProxyServer({});
-const port = config.port;
-const targetUrl = config.target_url;
-const expired = config.expired;
-const secret_key = config.secret_key;
+Object.entries(config).forEach(([key, proxyConfig]) => {
+    // Create Express app
+    const app = express();
+    const proxy = httpProxy.createProxyServer({});
+    const port = proxyConfig.port;
+    const targetUrl = proxyConfig.target_url;
+    const expired = proxyConfig.expired;
+    const secret_key = proxyConfig.secret_key;
 
-function encryptToken(data) {
-    const hmac = crypto.createHmac("sha256", secret_key);
-    hmac.update(data);
-    return hmac.digest("hex");
-}
+    function encryptToken(data) {
+        const hmac = crypto.createHmac("sha256", secret_key);
+        hmac.update(data);
+        return hmac.digest("hex");
+    }
 
-function verifyToken(data, token) {
-    const expectedToken = encryptToken(data);
-    return expectedToken === token;
-}
+    function verifyToken(data, token) {
+        const expectedToken = encryptToken(data);
+        return expectedToken === token;
+    }
 
-app.use(cookieParser());
+    app.use(cookieParser());
 
-// Verification middleware
-function checkVerification(req, res, next) {
-    const validationToken = req.cookies.validation_token;
-    const expirationTime = req.cookies.validation_expiration;
+    // Verification middleware
+    function checkVerification(req, res, next) {
+        const validationToken = req.cookies.validation_token;
+        const expirationTime = req.cookies.validation_expiration;
 
-    // Check if the validation token and expiration time are present and valid
-    if (!validationToken || !expirationTime || Date.now() > expirationTime) {
-        // Verification failed, redirect to the verification page
-        const newExpirationTime = Date.now() + expired * 1000;
-        const newToken = encryptToken(newExpirationTime.toString());
-        res.cookie("validation_token", newToken, { maxAge: expired * 1000 });
-        res.cookie("validation_expiration", newExpirationTime, {
-            maxAge: expired * 1000,
-            httpOnly: true,
-            secure: true,
+        // Check if the validation token and expiration time are present and valid
+        if (!validationToken || !expirationTime || Date.now() > expirationTime) {
+            // Verification failed, redirect to the verification page
+            const newExpirationTime = Date.now() + expired * 1000;
+            const newToken = encryptToken(newExpirationTime.toString());
+            res.cookie("validation_token", newToken, { maxAge: expired * 1000 });
+            res.cookie("validation_expiration", newExpirationTime, {
+                maxAge: expired * 1000,
+                httpOnly: true,
+                secure: true,
+            });
+
+            // Generate the HTML for the verification page
+            res.status(200).send(veri_page);
+            return;
+        }
+
+        if (!verifyToken(expirationTime.toString(), validationToken)) {
+            res.clearCookie("validation_token");
+            res.clearCookie("validation_expiration");
+            res.status(200).send(veri_page);
+            return;
+        }
+
+        next();
+    }
+
+    // Middleware to verify the token
+    app.use(checkVerification);
+
+    // Proxy all requests
+    app.all("*", (req, res) => {
+        proxy.web(req, res, { target: targetUrl }, (err) => {
+            console.error(`Proxy error: Unable to connect to ${targetUrl}`);
+            handleNotFound(req, res);
         });
+    });
 
-        // Generate the HTML for the verification page
-        res.status(200).send(veri_page);
-        return;
-    }
-
-    if (!verifyToken(expirationTime.toString(), validationToken)) {
-        res.clearCookie("validation_token");
-        res.clearCookie("validation_expiration");
-        res.status(200).send(veri_page);
-        return;
-    }
-
-    next();
-}
-
-// Middleware to verify the token
-app.use(checkVerification);
-
-// Proxy all requests
-app.all("*", (req, res) => {
-    proxy.web(req, res, { target: targetUrl }, (err) => {
-        console.error(`Proxy error: Unable to connect to ${targetUrl}`);
+    // Error handling for proxy server
+    proxy.on("error", (err, req, res) => {
+        console.error("Proxy encountered an error:", err.message);
         handleNotFound(req, res);
     });
-});
 
-// Error handling for proxy server
-proxy.on("error", (err, req, res) => {
-    console.error("Proxy encountered an error:", err.message);
-    handleNotFound(req, res);
-});
-
-// Function to handle 404 responses
-function handleNotFound(req, res) {
-    const ext = path.extname(req.path).toLowerCase();
-    if (!ext || ext === ".html") {
-        res.status(404).send(not_found_page);
-    } else {
-        res.status(404).send("Not Found");
+    // Function to handle 404 responses
+    function handleNotFound(req, res) {
+        const ext = path.extname(req.path).toLowerCase();
+        if (!ext || ext === ".html") {
+            res.status(404).send(not_found_page);
+        } else {
+            res.status(404).send("Not Found");
+        }
     }
-}
 
-app.listen(port, () => {
-    console.log(`Server running on http://127.0.0.1:${port}`);
+    app.listen(port, () => {
+        console.log(`Server running on http://127.0.0.1:${port}`);
+    });
 });
