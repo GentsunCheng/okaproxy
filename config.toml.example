@@ -9,7 +9,6 @@ secret_key = "secret_key"
     time = 600
     count = 100
 
-
 [server1]
 port = 4001
 target_url = "http://127.0.0.1:3001"
