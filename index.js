@@ -103,7 +103,9 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
             let clientIp;
             if (req.headers['cf-connecting-ip']) {
                 clientIp = req.headers['cf-connecting-ip'];
-            } else if (req.headers['x-forwarded-for']) {
+            } else if (req.headers['x-real-ip']) {
+                clientIp = req.headers['x-real-ip'];
+            }  else if (req.headers['x-forwarded-for']) {
                 clientIp = req.headers['x-forwarded-for'].split(',')[0];  // First IP in the list
             } else {
                 clientIp = req.connection.remoteAddress;
