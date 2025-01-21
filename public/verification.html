@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification in Progress</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #121212; /* Dark background */
+            color: #E4E4E4; /* Light text */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: #1E1E1E; /* Card background */
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3); /* Shadow effect */
+            max-width: 400px;
+            width: 90%;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: #BB86FC; /* Primary color */
+            margin-bottom: 8px;
+        }
+
+        p {
+            font-size: 1rem;
+            margin: 10px 0;
+        }
+
+        .icon {
+            font-size: 3rem;
+            color: #BB86FC; /* Icon color */
+            margin: 16px 0;
+        }
+
+        .progress-container {
+            width: 100%;
+            background-color: #333;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 100%;
+            background-color: #BB86FC; /* Primary color */
+            border-radius: 5px;
+            animation: loadProgress 5s forwards;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: #E4E4E4;
+            margin-top: 20px;
+        }
+
+        @keyframes loadProgress {
+            0% {
+                width: 0%;
+            }
+            100% {
+                width: 100%;
+            }
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            color: #121212;
+            background-color: #BB86FC;
+            border-radius: 8px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: #9F6DE7;
+        }
+
+        .btn:active {
+            background-color: #7E4EC2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello, nice to meet you.</h1>
+        <p>Please wait while we set things up for you...</p>
+        <div class="icon">🔒</div>
+
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+
+        <div class="status-text">
+            <p>Verification progress: Initializing...</p>
+            <p>Estimated time: 5 seconds</p>
+        </div>
+    </div>
+
+    <script>
+        setTimeout(function () {
+            window.location.href = document.location.toString();
+        }, 5000); // Wait 5 seconds
+
+        // Update progress bar and status text
+        let progressText = document.querySelector('.status-text p');
+        let progressBar = document.querySelector('.progress-bar');
+        let progress = 0;
+
+        let interval = setInterval(function () {
+            progress += 2;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                progressText.innerText = "Verification complete. Redirecting...";
+            } else {
+                progressText.innerText = "Verification progress: " + progress + "%";
+            }
+            progressBar.style.width = progress + "%";
+        }, 100);
+    </script>
+</body>
+</html>
