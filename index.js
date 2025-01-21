@@ -34,6 +34,7 @@ const app = express();
 const proxy = httpProxy.createProxyServer({});
 const port = config.port || 4000;
 const targetUrl = config.target_url;
+const expired = config.expired;
 
 app.use(cookieParser());
 
@@ -46,9 +47,9 @@ const expirationTime = req.cookies.validation_expiration;
 if (!validationToken || !expirationTime || Date.now() > expirationTime) {
     // Verification failed, redirect to the verification page
     const newToken = generateRandomToken();
-    const newExpirationTime = Date.now() + 30 * 60 * 1000; // 30 minutes
-    res.cookie('validation_token', newToken, { maxAge: 30 * 60 * 1000 });
-    res.cookie('validation_expiration', newExpirationTime, { maxAge: 30 * 60 * 1000 });
+    const newExpirationTime = Date.now() + expired * 1000;
+    res.cookie('validation_token', newToken, { maxAge: expired * 1000 });
+    res.cookie('validation_expiration', newExpirationTime, { maxAge: expired * 1000 });
 
     // Generate the HTML for the verification page
     res.status(200).send(veri_page);
