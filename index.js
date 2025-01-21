@@ -87,7 +87,7 @@ function getGeolocation(ip) {
 
 // Middleware to log request failure details
 function logRequestFailure(req, err) {
-    const clientIp = req.ip || req.connection.remoteAddress;
+    const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const location = getGeolocation(clientIp);
     console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${location} | Error: ${err.message}`);
 }
