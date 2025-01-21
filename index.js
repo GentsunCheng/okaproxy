@@ -4,6 +4,7 @@ const httpProxy = require("http-proxy");
 const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
 
+const geoip = require("geoip-lite");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
@@ -74,6 +75,23 @@ try {
     process.exit(1);
 }
 
+// Function to get geolocation information of the IP
+function getGeolocation(ip) {
+    const geo = geoip.lookup(ip);
+    if (geo) {
+        return `${geo.country} - ${geo.city} (${geo.latitude}, ${geo.longitude})`;
+    } else {
+        return "Unknown location";
+    }
+}
+
+// Middleware to log request failure details
+function logRequestFailure(req, err) {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const location = getGeolocation(clientIp);
+    console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${location} | Error: ${err.message}`);
+}
+
 Object.entries(config).forEach(([key, proxyConfig]) => {
     const port = proxyConfig.port || 3000;
     const targetUrl = proxyConfig.target_url;
@@ -125,8 +143,6 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
         return expectedToken === token;
     }
 
-    app.use(cookieParser());
-
     // Verification middleware
     function checkVerification(req, res, next) {
         const validationToken = req.cookies.validation_token;
@@ -159,13 +175,14 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
         next();
     }
 
-    // Middleware to verify the token
-    app.use(checkVerification);
+    app.use(cookieParser()); // Use cookie-parser middleware to parse cookies
+    app.use(checkVerification); // Apply verification middleware
+    app.use(limiter); // Apply rate limiting middleware
 
     // Proxy all requests
     app.all("*", async (req, res) => {
         proxy.web(req, res, { target: targetUrl }, (err) => {
-            console.error(`Error proxying to target: ${err.message}`);
+            logRequestFailure(req, err);
             res.writeHead(502, { "Content-Type": "text/html" });
             res.end(bad_gateway_page);
         });
@@ -173,7 +190,7 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
 
     // Error handling for proxy server
     proxy.on("error", async (err, req, res) => {
-        console.error("Proxy encountered an error:", err.message);
+        logRequestFailure(req, err);
         res.writeHead(500, { "Content-Type": "text/html" });
         res.end(bad_gateway_page);
     });
@@ -181,6 +198,4 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
     app.listen(port, () => {
         console.log(`Server running on http://127.0.0.1:${port}`);
     });
-
-    app.use(limiter);
 });
