@@ -9,6 +9,10 @@ max = 50
 [server.limit]
 time = 600
 count = 100
+[server.https]
+enabled = false
+cert_path = "fullchain.pem"
+key_path = "privkey.pem"
 
 [[server]]
 name = "server1"
@@ -21,6 +25,10 @@ max = 60
 [server.limit]
 time = 700
 count = 120
+[server.https]
+enabled = false
+cert_path = "fullchain.pem"
+key_path = "privkey.pem"
 
 [[server]]
 name = "server2"
@@ -33,3 +41,7 @@ max = 60
 [server.limit]
 time = 700
 count = 120
+[server.https]
+enabled = false
+cert_path = "fullchain.pem"
+key_path = "privkey.pem"
