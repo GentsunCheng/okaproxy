@@ -1,5 +1,6 @@
 const express = require("express");
 const http = require("http");
+const https = require("https");
 const httpProxy = require("http-proxy");
 const cookieParser = require("cookie-parser");
 const rateLimit = require('express-rate-limit');
@@ -74,6 +75,21 @@ try {
     console.error("Parse TOML failed:", parseError);
     process.exit(1);
 }
+// Validate and extract server configurations
+const configObject = {};
+if (config.server && Array.isArray(config.server)) {
+    config.server.forEach((serverConfig) => {
+        const name = serverConfig.name;
+        if (!name) {
+            console.error("Each server configuration must have a name.");
+            process.exit(1);
+        }
+        configObject[name] = serverConfig;
+    });
+} else {
+    console.error("No valid server configuration found.");
+    process.exit(1);
+}
 
 // Function to get geolocation information of the IP
 function getGeolocation(ip) {
@@ -92,7 +108,7 @@ function logRequestFailure(req, err) {
     console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${location} | Error: ${err.message}`);
 }
 
-Object.entries(config).forEach(([key, proxyConfig]) => {
+Object.entries(configObject).forEach(([key, proxyConfig]) => {
     const port = proxyConfig.port || 3000;
     const targetUrl = proxyConfig.target_url;
     const expired = proxyConfig.expired;
@@ -100,6 +116,10 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
     const maxctn = proxyConfig.ctn.max || 50;
     const limiter_time = proxyConfig.limit.time || 600;
     const limiter_count = proxyConfig.limit.count || 100;
+    //https config
+    const https_enabled = proxyConfig.https.enabled || false;
+    const cert_path = proxyConfig.https.cert_path || "";
+    const key_path = proxyConfig.https.key_path || "";
     // Create Express app
     const app = express();
     const agent = new http.Agent({
@@ -195,7 +215,29 @@ Object.entries(config).forEach(([key, proxyConfig]) => {
         res.end(bad_gateway_page);
     });
 
-    app.listen(port, () => {
-        console.log(`Server running on http://127.0.0.1:${port}`);
-    });
+    if (https_enabled) {
+        if (!fs.existsSync(cert_path) || !fs.existsSync(key_path)) {
+            console.error("HTTPS enabled, but certificate or key file is missing.");
+            process.exit(1);
+        }
+
+        var sslOptions;
+        try {
+            sslOptions = {
+                key: fs.readFileSync(key_path, "utf8"),
+                cert: fs.readFileSync(cert_path, "utf8"),
+            };
+        } catch (err) {
+            console.error("Failed to load SSL certificate:", err);
+            process.exit(1);
+        }
+
+        https.createServer(sslOptions, app).listen(port, () => {
+            console.log(`HTTPS server running on https://127.0.0.1:${port}`);
+        });
+    } else {
+        http.createServer(app).listen(port, () => {
+            console.log(`HTTP server running on http://127.0.0.1:${port}`);
+        });
+    }
 });
