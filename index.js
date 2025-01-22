@@ -74,6 +74,21 @@ try {
     console.error("Parse TOML failed:", parseError);
     process.exit(1);
 }
+// Validate and extract server configurations
+const configObject = {};
+if (config.server && Array.isArray(config.server)) {
+    config.server.forEach((serverConfig) => {
+        const name = serverConfig.name;
+        if (!name) {
+            console.error("Each server configuration must have a name.");
+            process.exit(1);
+        }
+        configObject[name] = serverConfig;
+    });
+} else {
+    console.error("No valid server configuration found.");
+    process.exit(1);
+}
 
 // Function to get geolocation information of the IP
 function getGeolocation(ip) {
@@ -92,7 +107,7 @@ function logRequestFailure(req, err) {
     console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${location} | Error: ${err.message}`);
 }
 
-Object.entries(config).forEach(([key, proxyConfig]) => {
+Object.entries(configObject).forEach(([key, proxyConfig]) => {
     const port = proxyConfig.port || 3000;
     const targetUrl = proxyConfig.target_url;
     const expired = proxyConfig.expired;

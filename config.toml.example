@@ -1,32 +1,35 @@
-[server0]
+[[server]]
+name = "server0"
 port = 4000
 target_url = "http://127.0.0.1:3000"
 expired = 1800
 secret_key = "secret_key"
-    [server0.ctn]
-    max = 50
-    [server0.limit]
-    time = 600
-    count = 100
+[server.ctn]
+max = 50
+[server.limit]
+time = 600
+count = 100
 
-[server1]
+[[server]]
+name = "server1"
 port = 4001
 target_url = "http://127.0.0.1:3001"
 expired = 1800
 secret_key = "secret_key"
-    [server1.ctn]
-    max = 50
-    [server1.limit]
-    time = 600
-    count = 100
+[server.ctn]
+max = 60
+[server.limit]
+time = 700
+count = 120
 
-[server2]
+[[server]]
+name = "server2"
 port = 4002
 target_url = "http://127.0.0.1:3002"
 expired = 1800
 secret_key = "secret_key"
-    [server2.ctn]
-    max = 50
-    [server2.limit]
-    time = 600
-    count = 100
+[server.ctn]
+max = 60
+[server.limit]
+time = 700
+count = 120
