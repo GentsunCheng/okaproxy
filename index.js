@@ -13,7 +13,10 @@ const Redis = require("ioredis");
 const configFilePath = "config.toml";
 const exampleConfigFilePath = "config.toml.example";
 
-const redis = new Redis();
+const redis = new Redis({
+    connectTimeout: 10000,
+    maxRetriesPerRequest: 3
+});
 
 function initializeConfig() {
     if (!fs.existsSync(configFilePath)) {
@@ -36,6 +39,13 @@ function loadFile(filePath, defaultValue) {
     }
 }
 
+function getClientIp(req) {
+    return req.headers["cf-connecting-ip"] ||
+           req.headers["x-real-ip"] ||
+           req.headers["x-forwarded-for"]?.split(",")[0] ||
+           req.socket.remoteAddress;
+}
+
 function parseConfig() {
     try {
         return toml.parse(loadFile(configFilePath, ""));
@@ -51,7 +61,7 @@ function getGeolocation(ip) {
 }
 
 function logRequestFailure(req, err) {
-    const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const clientIp = getClientIp(req);
     console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
 }
 
@@ -64,12 +74,20 @@ function verifyToken(data, token, secret_key) {
 }
 
 async function rateLimitMiddleware(req, res, next) {
-    const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
+    const clientIp = getClientIp(req);
     const limit = 100;
     const window = 600;
     const key = `oka_rate_limit:${clientIp}`;
+    const luaScript = `
+        local current
+        current = redis.call("INCR", KEYS[1])
+        if current == 1 then
+            redis.call("EXPIRE", KEYS[1], ARGV[1])
+        end
+        return current
+    `;
     
-    const requests = await redis.incr(key);
+    const requests = await redis.eval(luaScript, 1, key, window);
     if (requests === 1) {
         await redis.expire(key, window);
     }
@@ -86,6 +104,7 @@ function createProxyServer(proxyConfig) {
         agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn.max || 50, timeout: 60000 }),
         changeOrigin: true,
         preserveHeaderKeyCase: true,
+        proxyTimeout: 120000,
     });
 
     function checkVerification(req, res, next) {
@@ -122,8 +141,10 @@ function createProxyServer(proxyConfig) {
 
     proxy.on("error", (err, req, res) => {
         logRequestFailure(req, err);
-        res.writeHead(500, { "Content-Type": "text/html" });
-        res.end(loadFile("public/502.html", "<h1>502 Bad Gateway</h1>"));
+        if (!res.headersSent) {
+            res.writeHead(502, { "Content-Type": "text/html" });
+            res.end(loadFile("public/502.html", "<h1>502 Bad Gateway</h1>"));
+        }
     });
 
     return app;
