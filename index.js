@@ -1,17 +1,19 @@
+const express = require("express");
 const http = require("http");
 const https = require("https");
 const httpProxy = require("http-proxy");
-const express = require("express");
-const rateLimit = require("express-rate-limit");
-const crypto = require("crypto");
-const geoip = require("geoip-lite");
 const cookieParser = require("cookie-parser");
+const geoip = require("geoip-lite");
+const crypto = require("crypto");
 const fs = require("fs");
 const toml = require("toml");
 const compression = require("compression");
+const Redis = require("ioredis");
 
 const configFilePath = "config.toml";
 const exampleConfigFilePath = "config.toml.example";
+
+const redis = new Redis();
 
 function initializeConfig() {
     if (!fs.existsSync(configFilePath)) {
@@ -61,6 +63,23 @@ function verifyToken(data, token, secret_key) {
     return encryptToken(data, secret_key) === token;
 }
 
+async function rateLimitMiddleware(req, res, next) {
+    const clientIp = req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress;
+    const limit = 100;
+    const window = 600;
+    const key = `oka_rate_limit:${clientIp}`;
+    
+    const requests = await redis.incr(key);
+    if (requests === 1) {
+        await redis.expire(key, window);
+    }
+    if (requests > limit) {
+        res.status(429).json({ message: "Too many requests, please try again later." });
+        return;
+    }
+    next();
+}
+
 function createProxyServer(proxyConfig) {
     const app = express();
     const proxy = httpProxy.createProxyServer({
@@ -69,37 +88,19 @@ function createProxyServer(proxyConfig) {
         preserveHeaderKeyCase: true,
     });
 
-    const limiter = rateLimit({
-        windowMs: (proxyConfig.limit.time || 600) * 1000,
-        max: proxyConfig.limit.count || 100,
-        message: "Too many requests, please try again later.",
-        keyGenerator: (req) => req.headers['cf-connecting-ip'] || req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.connection.remoteAddress,
-    });
-
-    const compressor = compression({
-        level: 6, 
-        threshold: 1024, 
-        filter: (req, res) => {
-            if (req.headers['x-no-compression']) {
-                return false;
-            }
-            return compression.filter(req, res);
-        }
-    })
-
     function checkVerification(req, res, next) {
-        const { validation_token, validation_expiration } = req.cookies;
-        if (!validation_token || !validation_expiration || Date.now() > validation_expiration) {
+        const { oka_validation_token, oka_validation_expiration } = req.cookies;
+        if (!oka_validation_token || !oka_validation_expiration || Date.now() > oka_validation_expiration) {
             const newExpirationTime = Date.now() + proxyConfig.expired * 1000;
             const newToken = encryptToken(newExpirationTime.toString(), proxyConfig.secret_key);
-            res.cookie("validation_token", newToken, { maxAge: proxyConfig.expired * 1000 });
-            res.cookie("validation_expiration", newExpirationTime, { maxAge: proxyConfig.expired * 1000, httpOnly: true, secure: true });
+            res.cookie("oka_validation_token", newToken, { maxAge: proxyConfig.expired * 1000 });
+            res.cookie("oka_validation_expiration", newExpirationTime, { maxAge: proxyConfig.expired * 1000, httpOnly: true, secure: true });
             res.status(200).send(loadFile("public/verification.html", "<h1>Verification</h1><script>setTimeout(() => window.location.reload(), 5000);</script>"));
             return;
         }
-        if (!verifyToken(validation_expiration.toString(), validation_token, proxyConfig.secret_key)) {
-            res.clearCookie("validation_token");
-            res.clearCookie("validation_expiration");
+        if (!verifyToken(oka_validation_expiration.toString(), oka_validation_token, proxyConfig.secret_key)) {
+            res.clearCookie("oka_validation_token");
+            res.clearCookie("oka_validation_expiration");
             res.status(200).send(loadFile("public/verification.html", "<h1>Verification</h1><script>setTimeout(() => window.location.reload(), 5000);</script>"));
             return;
         }
@@ -107,9 +108,9 @@ function createProxyServer(proxyConfig) {
     }
 
     app.use(cookieParser());
+    app.use(compression());
     app.use(checkVerification);
-    app.use(limiter);
-    app.use(compressor);
+    app.use(rateLimitMiddleware);
 
     app.all("*", (req, res) => {
         proxy.web(req, res, { target: proxyConfig.target_url }, (err) => {

@@ -19,6 +19,8 @@
     "express-rate-limit": "^7.5.0",
     "geoip-lite": "^1.4.10",
     "http-proxy": "^1.18.1",
+    "ioredis": "^5.4.2",
+    "pino": "^9.6.0",
     "toml": "^3.0.0"
   }
 }
