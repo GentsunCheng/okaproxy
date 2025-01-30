@@ -7,6 +7,7 @@ const geoip = require("geoip-lite");
 const crypto = require("crypto");
 const fs = require("fs");
 const toml = require("toml");
+const winston = require("winston");
 const compression = require("compression");
 const Redis = require("ioredis");
 
@@ -18,13 +19,28 @@ const redis = new Redis({
     maxRetriesPerRequest: 3
 });
 
+const logger = winston.createLogger({
+    level: "info",
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message }) => {
+            return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: "logs/error.log", level: "error", maxsize: 10 * 1024 * 1024, maxFiles: 5 }),
+        new winston.transports.File({ filename: "logs/combined.log", maxsize: 10 * 1024 * 1024, maxFiles: 5 })
+    ],
+});
+
 function initializeConfig() {
     if (!fs.existsSync(configFilePath)) {
         if (fs.existsSync(exampleConfigFilePath)) {
             fs.copyFileSync(exampleConfigFilePath, configFilePath);
-            console.log(`First time running. Please edit ${configFilePath}.`);
+            logger.info(`First time running. Please edit ${configFilePath}.`);
         } else {
-            console.error("Both 'config.toml' are missing. Please provide a valid configuration file.");
+            logger.error("Both 'config.toml' are missing. Please provide a valid configuration file.");
         }
         process.exit(1);
     }
@@ -34,7 +50,7 @@ function loadFile(filePath, defaultValue) {
     try {
         return fs.readFileSync(filePath, "utf8");
     } catch (err) {
-        console.error(`Error reading file ${filePath}:`, err);
+        logger.error(`Error reading file ${filePath}:`, err);
         return defaultValue;
     }
 }
@@ -50,7 +66,7 @@ function parseConfig() {
     try {
         return toml.parse(loadFile(configFilePath, ""));
     } catch (parseError) {
-        console.error("Parse TOML failed:", parseError);
+        logger.error("Parse TOML failed:", parseError);
         process.exit(1);
     }
 }
@@ -62,7 +78,7 @@ function getGeolocation(ip) {
 
 function logRequestFailure(req, err) {
     const clientIp = getClientIp(req);
-    console.error(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
+    logger.warn(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
 }
 
 function encryptToken(data, secret_key) {
@@ -152,25 +168,25 @@ function createProxyServer(proxyConfig) {
 
 function startServers(config) {
     if (!config.server || !Array.isArray(config.server)) {
-        console.error("No valid server configuration found.");
+        logger.error("No valid server configuration found.");
         process.exit(1);
     }
     config.server.forEach((proxyConfig) => {
         if (!proxyConfig.name) {
-            console.error("Each server configuration must have a name.");
+            logger.error("Each server configuration must have a name.");
             process.exit(1);
         }
         const app = createProxyServer(proxyConfig);
         const port = proxyConfig.port || 3000;
         if (proxyConfig.https.enabled) {
             if (!fs.existsSync(proxyConfig.https.cert_path) || !fs.existsSync(proxyConfig.https.key_path)) {
-                console.error("HTTPS enabled, but certificate or key file is missing.");
+                logger.error("HTTPS enabled, but certificate or key file is missing.");
                 process.exit(1);
             }
             const sslOptions = { key: loadFile(proxyConfig.https.key_path, ""), cert: loadFile(proxyConfig.https.cert_path, "") };
-            https.createServer(sslOptions, app).listen(port, () => console.log(`HTTPS server running on https://127.0.0.1:${port}`));
+            https.createServer(sslOptions, app).listen(port, () => logger.info(`HTTPS server running on https://127.0.0.1:${port}`));
         } else {
-            http.createServer(app).listen(port, () => console.log(`HTTP server running on http://127.0.0.1:${port}`));
+            http.createServer(app).listen(port, () => logger.info(`HTTP server running on http://127.0.0.1:${port}`));
         }
     });
 }
