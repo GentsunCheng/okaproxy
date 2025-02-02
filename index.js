@@ -108,6 +108,7 @@ async function rateLimitMiddleware(req, res, next) {
         await redis.expire(key, window);
     }
     if (requests > limit) {
+        logger.info(`[RATE LIMIT] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
         res.status(429).json({ message: "Too many requests, please try again later." });
         return;
     }
