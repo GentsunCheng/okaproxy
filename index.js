@@ -2,7 +2,6 @@ const express = require("express");
 const http = require("http");
 const https = require("https");
 const httpProxy = require("http-proxy");
-const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const geoip = require("geoip-lite");
 const crypto = require("crypto");
@@ -164,7 +163,6 @@ function createProxyServer(proxyConfig) {
         next();
     }
 
-    app.use(helmet());
     app.use(cookieParser());
     app.use(compression());
     app.use(checkVerification);
