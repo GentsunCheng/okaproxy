@@ -83,12 +83,12 @@ function parseConfig() {
 
 function getGeolocation(ip) {
     const geo = geoip.lookup(ip);
-    return geo ? `${geo.country} - ${geo.city} (${geo.latitude}, ${geo.longitude})` : "Unknown location";
+    return geo ? `${geo.country} - ${geo.city} (${geo.ll[0]}, ${geo.ll[1]})` : "Unknown location";
 }
 
 function logRequestFailure(req, err) {
     const clientIp = getClientIp(req);
-    logger.warn(`${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
+    logger.warn(`IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Warning: ${err.message}`);
 }
 
 function encryptToken(data, secret_key) {
@@ -125,7 +125,7 @@ async function rateLimitMiddleware(req, res, next) {
         await redis.expire(key, window);
     }
     if (requests > count) {
-        logger.info(`[RATE LIMIT] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
+        logger.info(`[RATE LIMIT] | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
         res.status(429).json({ message: "Too many requests, please try again later." });
         return;
     }
