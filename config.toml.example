@@ -1,3 +1,7 @@
+[limit]
+count = 60
+window = 500
+
 [[server]]
 name = "server0"
 port = 4000
@@ -6,9 +10,6 @@ expired = 1800
 secret_key = "secret_key"
 [server.ctn]
 max = 50
-[server.limit]
-time = 60
-count = 120
 [server.https]
 enabled = false
 cert_path = "fullchain.pem"
@@ -22,9 +23,6 @@ expired = 1800
 secret_key = "secret_key"
 [server.ctn]
 max = 60
-[server.limit]
-time = 60
-count = 120
 [server.https]
 enabled = false
 cert_path = "fullchain.pem"
@@ -38,9 +36,6 @@ expired = 1800
 secret_key = "secret_key"
 [server.ctn]
 max = 60
-[server.limit]
-time = 60
-count = 120
 [server.https]
 enabled = false
 cert_path = "fullchain.pem"
