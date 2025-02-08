@@ -31,6 +31,7 @@ const logger = winston.createLogger({
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({ filename: "logs/error.log", level: "error", maxsize: 10 * 1024 * 1024, maxFiles: 5 }),
+        new winston.transports.File({ filename: "logs/warn.log", level: "warn", maxsize: 10 * 1024 * 1024, maxFiles: 5 }),
         new winston.transports.File({ filename: "logs/combined.log", maxsize: 10 * 1024 * 1024, maxFiles: 5 })
     ],
 });
@@ -82,12 +83,12 @@ function parseConfig() {
 
 function getGeolocation(ip) {
     const geo = geoip.lookup(ip);
-    return geo ? `${geo.country} - ${geo.city} (${geo.latitude}, ${geo.longitude})` : "Unknown location";
+    return geo ? `${geo.country} - ${geo.city} (${geo.ll[0]}, ${geo.ll[1]})` : "Unknown location";
 }
 
 function logRequestFailure(req, err) {
     const clientIp = getClientIp(req);
-    logger.warn(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
+    logger.warn(`IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Warning: ${err.message}`);
 }
 
 function encryptToken(data, secret_key) {
@@ -124,7 +125,7 @@ async function rateLimitMiddleware(req, res, next) {
         await redis.expire(key, window);
     }
     if (requests > count) {
-        logger.info(`[RATE LIMIT] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
+        logger.info(`[RATE LIMIT] | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
         res.status(429).json({ message: "Too many requests, please try again later." });
         return;
     }
@@ -138,7 +139,7 @@ const errorPage = loadFile("public/502.html", "<h1>502 Bad Gateway</h1>");
 function createProxyServer(proxyConfig) {
     const app = express();
     const proxy = httpProxy.createProxyServer({
-        agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn.max || 50, timeout: 60000 }),
+        agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn_max || 50, timeout: 60000 }),
         changeOrigin: true,
         preserveHeaderKeyCase: true,
         proxyTimeout: 120000,
@@ -199,7 +200,7 @@ function startServers(config) {
         }
         const app = createProxyServer(proxyConfig);
         const port = proxyConfig.port || 3000;
-        if (proxyConfig.https.enabled) {
+        if (proxyConfig.https && proxyConfig.https.enabled) {
             if (!fs.existsSync(proxyConfig.https.cert_path) || !fs.existsSync(proxyConfig.https.key_path)) {
                 logger.error("HTTPS enabled, but certificate or key file is missing.");
                 process.exit(1);
