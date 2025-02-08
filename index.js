@@ -107,8 +107,8 @@ function verifyToken(data, token, secret_key) {
 
 async function rateLimitMiddleware(req, res, next) {
     const clientIp = getClientIp(req);
-    const limit = 100;
-    const window = 600;
+    const count = 60 || config.limit.count;
+    const window = 100 || config.limit.window;
     const key = `oka_rate_limit:${clientIp}`;
     const luaScript = `
         local current
@@ -123,7 +123,7 @@ async function rateLimitMiddleware(req, res, next) {
     if (requests === 1) {
         await redis.expire(key, window);
     }
-    if (requests > limit) {
+    if (requests > count) {
         logger.info(`[RATE LIMIT] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Request: ${req.method} ${req.url}`);
         res.status(429).json({ message: "Too many requests, please try again later." });
         return;
