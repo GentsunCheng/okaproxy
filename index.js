@@ -31,6 +31,7 @@ const logger = winston.createLogger({
     transports: [
         new winston.transports.Console(),
         new winston.transports.File({ filename: "logs/error.log", level: "error", maxsize: 10 * 1024 * 1024, maxFiles: 5 }),
+        new winston.transports.File({ filename: "logs/warn.log", level: "warn", maxsize: 10 * 1024 * 1024, maxFiles: 5 }),
         new winston.transports.File({ filename: "logs/combined.log", maxsize: 10 * 1024 * 1024, maxFiles: 5 })
     ],
 });
@@ -87,7 +88,7 @@ function getGeolocation(ip) {
 
 function logRequestFailure(req, err) {
     const clientIp = getClientIp(req);
-    logger.warn(`[ERROR] ${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
+    logger.warn(`${new Date().toISOString()} | IP: ${clientIp} | Location: ${getGeolocation(clientIp)} | Error: ${err.message}`);
 }
 
 function encryptToken(data, secret_key) {
