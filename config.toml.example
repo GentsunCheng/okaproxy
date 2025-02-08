@@ -7,8 +7,8 @@ secret_key = "secret_key"
 [server.ctn]
 max = 50
 [server.limit]
-time = 600
-count = 100
+time = 60
+count = 120
 [server.https]
 enabled = false
 cert_path = "fullchain.pem"
@@ -23,7 +23,7 @@ secret_key = "secret_key"
 [server.ctn]
 max = 60
 [server.limit]
-time = 700
+time = 60
 count = 120
 [server.https]
 enabled = false
@@ -39,7 +39,7 @@ secret_key = "secret_key"
 [server.ctn]
 max = 60
 [server.limit]
-time = 700
+time = 60
 count = 120
 [server.https]
 enabled = false
