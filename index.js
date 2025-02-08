@@ -138,7 +138,7 @@ const errorPage = loadFile("public/502.html", "<h1>502 Bad Gateway</h1>");
 function createProxyServer(proxyConfig) {
     const app = express();
     const proxy = httpProxy.createProxyServer({
-        agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn.max || 50, timeout: 60000 }),
+        agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn_max || 50, timeout: 60000 }),
         changeOrigin: true,
         preserveHeaderKeyCase: true,
         proxyTimeout: 120000,
@@ -199,7 +199,7 @@ function startServers(config) {
         }
         const app = createProxyServer(proxyConfig);
         const port = proxyConfig.port || 3000;
-        if (proxyConfig.https.enabled) {
+        if (proxyConfig.https && proxyConfig.https.enabled) {
             if (!fs.existsSync(proxyConfig.https.cert_path) || !fs.existsSync(proxyConfig.https.key_path)) {
                 logger.error("HTTPS enabled, but certificate or key file is missing.");
                 process.exit(1);

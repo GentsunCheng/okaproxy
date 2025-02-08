@@ -8,12 +8,7 @@ port = 4000
 target_url = "http://127.0.0.1:3000"
 expired = 1800
 secret_key = "secret_key"
-[server.ctn]
-max = 50
-[server.https]
-enabled = false
-cert_path = "fullchain.pem"
-key_path = "privkey.pem"
+ctn_max = 50
 
 [[server]]
 name = "server1"
@@ -21,12 +16,7 @@ port = 4001
 target_url = "http://127.0.0.1:3001"
 expired = 1800
 secret_key = "secret_key"
-[server.ctn]
-max = 60
-[server.https]
-enabled = false
-cert_path = "fullchain.pem"
-key_path = "privkey.pem"
+ctn_max = 60
 
 [[server]]
 name = "server2"
@@ -34,9 +24,8 @@ port = 4002
 target_url = "http://127.0.0.1:3002"
 expired = 1800
 secret_key = "secret_key"
-[server.ctn]
-max = 60
+ctn_max = 60
 [server.https]
-enabled = false
+enabled = true
 cert_path = "fullchain.pem"
 key_path = "privkey.pem"
