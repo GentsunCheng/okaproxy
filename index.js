@@ -2,12 +2,14 @@ const express = require("express");
 const http = require("http");
 const https = require("https");
 const httpProxy = require("http-proxy");
+const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 const geoip = require("geoip-lite");
 const crypto = require("crypto");
 const fs = require("fs");
 const toml = require("toml");
 const winston = require("winston");
+const DailyRotateFile = require("winston-daily-rotate-file");
 const compression = require("compression");
 const Redis = require("ioredis");
 
@@ -33,6 +35,14 @@ const logger = winston.createLogger({
         new winston.transports.File({ filename: "logs/combined.log", maxsize: 10 * 1024 * 1024, maxFiles: 5 })
     ],
 });
+
+logger.add(new DailyRotateFile({
+    filename: "logs/application-%DATE%.log",
+    datePattern: "YYYY-MM-DD",
+    zippedArchive: true,
+    maxSize: "20m",
+    maxFiles: "14d"
+}));
 
 function initializeConfig() {
     if (!fs.existsSync(configFilePath)) {
@@ -86,8 +96,15 @@ function encryptToken(data, secret_key) {
 }
 
 function verifyToken(data, token, secret_key) {
-    return encryptToken(data, secret_key) === token;
+    const expected = encryptToken(data, secret_key);
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+    const tokenBuffer = Buffer.from(token, 'utf8');
+    if (expectedBuffer.length !== tokenBuffer.length) {
+        return false;
+    }
+    return crypto.timingSafeEqual(expectedBuffer, tokenBuffer);
 }
+
 
 async function rateLimitMiddleware(req, res, next) {
     const clientIp = getClientIp(req);
@@ -115,6 +132,10 @@ async function rateLimitMiddleware(req, res, next) {
     next();
 }
 
+
+const verificationPage = loadFile("public/verification.html", "<h1>Verification</h1><script>setTimeout(() => window.location.reload(), 5000);</script>");
+const errorPage = loadFile("public/502.html", "<h1>502 Bad Gateway</h1>");
+
 function createProxyServer(proxyConfig) {
     const app = express();
     const proxy = httpProxy.createProxyServer({
@@ -126,23 +147,24 @@ function createProxyServer(proxyConfig) {
 
     function checkVerification(req, res, next) {
         const { oka_validation_token, oka_validation_expiration } = req.cookies;
-        if (!oka_validation_token || !oka_validation_expiration || Date.now() > oka_validation_expiration) {
+        if (!oka_validation_token || !oka_validation_expiration || Date.now() > Number(oka_validation_expiration)) {
             const newExpirationTime = Date.now() + proxyConfig.expired * 1000;
             const newToken = encryptToken(newExpirationTime.toString(), proxyConfig.secret_key);
             res.cookie("oka_validation_token", newToken, { maxAge: proxyConfig.expired * 1000 });
             res.cookie("oka_validation_expiration", newExpirationTime, { maxAge: proxyConfig.expired * 1000, httpOnly: true, secure: true });
-            res.status(200).send(loadFile("public/verification.html", "<h1>Verification</h1><script>setTimeout(() => window.location.reload(), 5000);</script>"));
+            res.status(200).send(verificationPage);
             return;
         }
         if (!verifyToken(oka_validation_expiration.toString(), oka_validation_token, proxyConfig.secret_key)) {
             res.clearCookie("oka_validation_token");
             res.clearCookie("oka_validation_expiration");
-            res.status(200).send(loadFile("public/verification.html", "<h1>Verification</h1><script>setTimeout(() => window.location.reload(), 5000);</script>"));
+            res.status(200).send(verificationPage);
             return;
         }
         next();
     }
 
+    app.use(helmet());
     app.use(cookieParser());
     app.use(compression());
     app.use(checkVerification);
@@ -152,7 +174,7 @@ function createProxyServer(proxyConfig) {
         proxy.web(req, res, { target: proxyConfig.target_url }, (err) => {
             logRequestFailure(req, err);
             res.writeHead(502, { "Content-Type": "text/html" });
-            res.end(loadFile("public/502.html", "<h1>502 Bad Gateway</h1>"));
+            res.end(errorPage);
         });
     });
 
@@ -160,7 +182,7 @@ function createProxyServer(proxyConfig) {
         logRequestFailure(req, err);
         if (!res.headersSent) {
             res.writeHead(502, { "Content-Type": "text/html" });
-            res.end(loadFile("public/502.html", "<h1>502 Bad Gateway</h1>"));
+            res.end(errorPage);
         }
     });
 
