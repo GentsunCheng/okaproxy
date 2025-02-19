@@ -108,8 +108,12 @@ function verifyToken(data, token, secret_key) {
 
 async function rateLimitMiddleware(req, res, next) {
     const clientIp = getClientIp(req);
-    const count = 60 || config.limit.count;
-    const window = 100 || config.limit.window;
+    const count = config.limit.count;
+    const window = config.limit.window;
+    if(count === 0 || window === 0) {
+        next();
+        return;
+    }
     const key = `oka_rate_limit:${clientIp}`;
     const luaScript = `
         local current
@@ -138,13 +142,21 @@ const errorPage = loadFile("public/502.html", "<h1>502 Bad Gateway</h1>");
 
 function createProxyServer(proxyConfig) {
     const app = express();
-    const proxy = httpProxy.createProxyServer({
-        agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn_max || 50, timeout: 60000 }),
-        changeOrigin: true,
-        preserveHeaderKeyCase: true,
-        proxyTimeout: 120000,
-    });
-
+    var proxy;
+    if (proxyConfig.ctn_max === 0) {
+        proxy = httpProxy.createProxyServer({
+            changeOrigin: true,
+            preserveHeaderKeyCase: true,
+            proxyTimeout: 120000,
+        });
+    } else {
+        proxy = httpProxy.createProxyServer({
+            agent: new http.Agent({ keepAlive: true, maxSockets: proxyConfig.ctn_max || 50, timeout: 10000 }),
+            changeOrigin: true,
+            preserveHeaderKeyCase: true,
+            proxyTimeout: 120000,
+        });
+    }
     function checkVerification(req, res, next) {
         const { oka_validation_token, oka_validation_expiration } = req.cookies;
         if (!oka_validation_token || !oka_validation_expiration || Date.now() > Number(oka_validation_expiration)) {
