@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>502 Bad Gateway</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <title>502 Bad Gateway - OkaProxy</title>
     <style>
-        /* Reset and global styles */
         * {
             margin: 0;
             padding: 0;
@@ -14,77 +12,428 @@
         }
 
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            background-color: #f5f5f5; /* Light background color */
-            color: #333; /* Neutral text color */
-            margin: 0;
+            justify-content: center;
+            padding: 20px;
         }
 
         .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             text-align: center;
-            padding: 20px;
-            max-width: 600px;
-            background-color: #ffffff; /* Card background color */
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Subtle elevation */
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
         }
 
-        .container h1 {
-            font-size: 96px;
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+        }
+
+        .error-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: white;
+            position: relative;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .error-icon::after {
+            content: '';
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border: 2px solid #ff6b6b;
+            border-radius: 50%;
+            animation: ripple 2s ease-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            color: #6200ee; /* Primary color */
-            margin-bottom: 16px;
         }
 
-        .container p {
-            font-size: 18px;
+        .error-code {
+            color: #ff6b6b;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .error-message {
+            color: #5a6c7d;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            font-size: 1.1rem;
+        }
+
+        .error-details {
+            color: #6c757d;
+            margin-bottom: 2rem;
             line-height: 1.5;
-            color: #666; /* Secondary text color */
-            margin-bottom: 24px;
+            font-size: 0.95rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
         }
 
         .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 500;
-            text-decoration: none;
-            color: #ffffff;
-            background-color: #6200ee; /* Primary color */
+            padding: 0.75rem 1.5rem;
+            border: none;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            justify-content: center;
         }
 
-        .btn:hover {
-            background-color: #3700b3; /* Darker primary on hover */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
         }
 
-        .btn:active {
-            background-color: #29006b; /* Pressed state */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
         }
 
-        @media (max-width: 768px) {
-            .container h1 {
-                font-size: 72px;
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #6c757d;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .status-info {
+            background: #f8f9fa;
+            border-left: 4px solid #ff6b6b;
+            padding: 1rem;
+            margin: 2rem 0;
+            border-radius: 0 8px 8px 0;
+            text-align: left;
+        }
+
+        .status-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-list {
+            list-style: none;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .status-list li {
+            padding: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .status-list li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #ff6b6b;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e9ecef;
+            font-size: 0.8rem;
+            color: #adb5bd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .error-id {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 2rem;
+                margin: 10px;
             }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .footer {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
 
-            .container p {
-                font-size: 16px;
+        /* Auto-refresh indicator */
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 107, 107, 0.9);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .refresh-indicator.show {
+            display: block;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .container {
+                background: rgba(30, 30, 30, 0.95);
+                color: #e9ecef;
+            }
+            
+            h1 {
+                color: #f8f9fa;
+            }
+            
+            .error-details, .error-message {
+                color: #ced4da;
+            }
+            
+            .status-info {
+                background: #343a40;
+                color: #e9ecef;
+            }
+            
+            .btn-secondary {
+                background: #495057;
+                color: #e9ecef;
+                border-color: #6c757d;
+            }
+            
+            .footer {
+                border-color: #495057;
+                color: #6c757d;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="error-icon">⚠️</div>
+        
         <h1>502</h1>
-        <p>Oops! Something went wrong. Service unavailable.</p>
+        <div class="error-code">BAD GATEWAY</div>
+        
+        <div class="error-message">
+            The server is temporarily unavailable
+        </div>
+        
+        <div class="error-details">
+            We're unable to connect to the upstream server right now. This could be due to maintenance, 
+            high traffic, or a temporary network issue.
+        </div>
+
+        <div class="status-info">
+            <div class="status-title">
+                <span>🔍</span>
+                What you can try:
+            </div>
+            <ul class="status-list">
+                <li>Wait a few moments and refresh the page</li>
+                <li>Check your internet connection</li>
+                <li>Try accessing the site later</li>
+                <li>Contact support if the issue persists</li>
+            </ul>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="window.location.reload()">
+                <span>🔄</span>
+                Try Again
+            </button>
+            <button class="btn btn-secondary" onclick="window.history.back()">
+                <span>←</span>
+                Go Back
+            </button>
+        </div>
+
+        <div class="footer">
+            <span>Powered by OkaProxy</span>
+            <span class="error-id" id="errorId">ERR-502-001</span>
+        </div>
     </div>
+
+    <div class="refresh-indicator" id="refreshIndicator">
+        Auto-refreshing in <span id="countdown">30</span>s
+    </div>
+
+    <script>
+        // Generate a random error ID
+        document.getElementById('errorId').textContent = 
+            'ERR-502-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+        // Auto-refresh functionality
+        let refreshEnabled = true;
+        let countdownTime = 30;
+        let countdownInterval;
+
+        function startAutoRefresh() {
+            const indicator = document.getElementById('refreshIndicator');
+            const countdownElement = document.getElementById('countdown');
+            
+            indicator.classList.add('show');
+            
+            countdownInterval = setInterval(() => {
+                countdownTime--;
+                countdownElement.textContent = countdownTime;
+                
+                if (countdownTime <= 0) {
+                    clearInterval(countdownInterval);
+                    if (refreshEnabled) {
+                        window.location.reload();
+                    }
+                }
+            }, 1000);
+        }
+
+        // Start auto-refresh after 5 seconds
+        setTimeout(startAutoRefresh, 5000);
+
+        // Disable auto-refresh if user interacts with the page
+        ['click', 'keydown', 'mousemove'].forEach(event => {
+            document.addEventListener(event, () => {
+                refreshEnabled = false;
+                document.getElementById('refreshIndicator').classList.remove('show');
+                clearInterval(countdownInterval);
+            }, { once: true });
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                document.title = '❌ Service Unavailable - OkaProxy';
+                clearInterval(countdownInterval);
+            } else {
+                document.title = '502 Bad Gateway - OkaProxy';
+                if (refreshEnabled && countdownTime > 0) {
+                    startAutoRefresh();
+                }
+            }
+        });
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R') {
+                if (e.ctrlKey || e.metaKey) return; // Don't interfere with Ctrl+R
+                window.location.reload();
+            } else if (e.key === 'Escape') {
+                window.history.back();
+            }
+        });
+
+        // Simple analytics tracking (if needed)
+        console.log('502 Error:', {
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            referrer: document.referrer
+        });
+
+        // Show additional debug info in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            setTimeout(() => {
+                const debugInfo = document.createElement('div');
+                debugInfo.style.cssText = `
+                    position: fixed;
+                    bottom: 10px;
+                    left: 10px;
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 5px 10px;
+                    border-radius: 5px;
+                    font-size: 10px;
+                    font-family: monospace;
+                `;
+                debugInfo.textContent = 'DEV: Check server logs for details';
+                document.body.appendChild(debugInfo);
+            }, 2000);
+        }
+    </script>
 </body>
 </html>
