@@ -26,7 +26,7 @@ A high-performance, secure HTTP proxy server written in **Go** with DDoS protect
 
 ```bash
 # Clone the repository
-git clone https://github.com/GentsunCheng/okaproxy.git
+git clone -b go https://github.com/GentsunCheng/okaproxy.git
 cd okaproxy
 
 # Install dependencies
