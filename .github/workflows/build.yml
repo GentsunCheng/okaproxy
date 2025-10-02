@@ -63,7 +63,9 @@ jobs:
         GOOS=windows GOARCH=amd64 go build -ldflags "-X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT} -w -s" -o dist/${BINARY_NAME}-windows-amd64.exe .
 
     - name: List dist contents
-      run: ls -la dist/
+      run: |
+        echo "Contents of dist directory:"
+        find dist -type f
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
