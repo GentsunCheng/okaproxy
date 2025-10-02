@@ -1,31 +1,100 @@
+# OkaProxy Configuration File
+# This is an example configuration file for OkaProxy
+# Copy this file to config.toml and modify according to your needs
+
+# Rate limiting configuration
 [limit]
-count = 60
-window = 500
+count = 100    # Maximum requests per window (0 = disabled)
+window = 60    # Time window in seconds
 
+# Server configurations
+# You can define multiple proxy servers with different configurations
 [[server]]
-name = "server0"
-port = 4000
-target_url = "http://127.0.0.1:3000"
-expired = 1800
-secret_key = "secret_key"
-ctn_max = 50
+name = "example-proxy"           # Server name (must be unique)
+port = 3000                     # Port to listen on
+target_url = "http://localhost:8080"  # Target server URL to proxy to
+secret_key = "your-secret-key-change-this"  # Secret key for token encryption (CHANGE THIS!)
+expired = 300                   # Cookie expiration time in seconds (5 minutes)
+ctn_max = 50                   # Maximum connections (0 = unlimited)
 
-[[server]]
-name = "server1"
-port = 4001
-target_url = "http://127.0.0.1:3001"
-expired = 1800
-secret_key = "secret_key"
-ctn_max = 60
+# HTTPS configuration (optional)
+[server.https]
+enabled = false                 # Set to true to enable HTTPS
+cert_path = "/path/to/cert.pem" # Path to SSL certificate
+key_path = "/path/to/key.pem"   # Path to SSL private key
 
+# Another server example (HTTPS enabled)
 [[server]]
-name = "server2"
-port = 4002
-target_url = "http://127.0.0.1:3002"
-expired = 1800
-secret_key = "secret_key"
-ctn_max = 60
+name = "secure-proxy"
+port = 3443
+target_url = "https://example.com"
+secret_key = "another-secret-key-change-this-too"
+expired = 600                   # 10 minutes
+ctn_max = 100
+
+# HTTPS configuration for the secure proxy
 [server.https]
 enabled = true
-cert_path = "fullchain.pem"
-key_path = "privkey.pem"
+cert_path = "/etc/ssl/certs/your-domain.pem"
+key_path = "/etc/ssl/private/your-domain-key.pem"
+
+# Multiple servers example for load balancing or different services
+[[server]]
+name = "api-proxy"
+port = 3001
+target_url = "http://api-server:8080"
+secret_key = "api-secret-key"
+expired = 120                   # 2 minutes for API (shorter for security)
+ctn_max = 200
+
+[server.https]
+enabled = false
+
+[[server]]
+name = "web-proxy"
+port = 3002
+target_url = "http://web-server:80"
+secret_key = "web-secret-key"
+expired = 1800                  # 30 minutes for web interface
+ctn_max = 0                    # Unlimited connections
+
+[server.https]
+enabled = false
+
+# Configuration Notes:
+# 
+# 1. Security:
+#    - Always change the default secret_key values
+#    - Use strong, random secret keys (at least 32 characters)
+#    - Keep secret keys confidential and different for each server
+#
+# 2. Rate Limiting:
+#    - Adjust count and window based on your traffic patterns
+#    - Set count=0 to disable rate limiting
+#    - Redis must be running and accessible for rate limiting to work
+#
+# 3. HTTPS:
+#    - Obtain SSL certificates from a trusted CA or use Let's Encrypt
+#    - Ensure certificate and key files are readable by the OkaProxy process
+#    - Consider using a reverse proxy like Nginx for SSL termination in production
+#
+# 4. Performance:
+#    - ctn_max controls connection pooling to upstream servers
+#    - Set to 0 for unlimited connections (use with caution)
+#    - Adjust based on upstream server capacity
+#
+# 5. Cookies:
+#    - expired time affects how often users see the verification page
+#    - Shorter times = better security but more user friction
+#    - Longer times = better user experience but less security
+#
+# 6. Target URLs:
+#    - Can be HTTP or HTTPS
+#    - Can include ports (e.g., http://example.com:8080)
+#    - Should be reachable from the OkaProxy server
+#
+# Example production configuration:
+# - Use environment variables for secrets
+# - Enable HTTPS for all public-facing proxies
+# - Set appropriate rate limits based on expected traffic
+# - Use monitoring and logging to tune performance
