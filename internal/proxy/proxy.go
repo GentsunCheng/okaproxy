@@ -106,7 +106,7 @@ func (pm *ProxyManager) CreateReverseProxy(serverConfig *config.ServerConfig) (*
 	// Custom error handler
 	proxy.ErrorHandler = pm.createErrorHandler(serverConfig)
 
-	// Custom response modifier
+	// Custom response modifier to properly handle redirects
 	originalModifyResponse := proxy.ModifyResponse
 	proxy.ModifyResponse = func(resp *http.Response) error {
 		// Call original modifier if exists
@@ -119,7 +119,7 @@ func (pm *ProxyManager) CreateReverseProxy(serverConfig *config.ServerConfig) (*
 		// Add security headers to response
 		resp.Header.Set("X-Proxy-By", "OkaProxy")
 		resp.Header.Set("X-Content-Type-Options", "nosniff")
-		
+	
 		// Remove potentially sensitive headers
 		resp.Header.Del("Server")
 		resp.Header.Del("X-Powered-By")
